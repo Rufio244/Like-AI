@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LikeAI Portal OS - Cristal System</title>
+<style>
+body{font-family:sans-serif;background:#f0f7f0;display:flex;justify-content:center;padding:20px}
+.card{max-width:380px;width:100%;background:#fff;padding:16px;border-radius:14px;box-shadow:0 4px 16px #0002}
+input,button{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ccc;box-sizing:border-box}
+button{background:#2e7d32;color:#fff;border:0;font-weight:bold;cursor:pointer}
+.log{font-size:12px;background:#f6fbf6;padding:8px;border-radius:8px;margin-top:10px;max-height:200px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="card">
+<h3>🥬 LikeAI Cristal Portal - Ready System</h3>
+<p style="font-size:12px;color:#666">โดย Thanva Phupingbut | Auto Run Server</p>
+<input id="name" placeholder="ชื่อผู้ใช้ *">
+<input id="from" placeholder="โค้ดต้นทาง Cristal-ROOT">
+<input id="group" placeholder="กลุ่ม/หมู่บ้าน *">
+<div id="status"></div>
+<div id="result" class="log"></div>
+</div>
+
+<script>
+// === CONFIG API ===
+const CONFIG = {
+  API_URL: "https://api.cristal.farm/v1/sync", // เปลี่ยนเป็น API จริงได้
+  API_KEY: "", // ใส่ในระบบหลังบ้านเท่านั้น ห้ามใส่ตรงนี้ถ้าขึ้น public
+  AUTO_RUN: true
+};
+
+let db = JSON.parse(localStorage.getItem('cristal_db')||'[]');
+
+// 1. ตรวจสอบความต้องการ
+function validate(d){
+  if(!d.name || !d.group) return {ok:false, msg:"❌ ต้องกรอกชื่อ+กลุ่ม"};
+  if(d.from && !d.from.toLowerCase().includes('cristal')) return {ok:false, msg:"❌ โค้ดต้องมีคำว่า Cristal"};
+  return {ok:true};
+}
+
+// 2. ส่งข้อมูลไป API + รันสำเร็จรูป
+async function sendToAPI(data){
+  status.innerHTML = "⏳ กำลังตรวจสอบ...";
+  let v = validate(data);
+  if(!v.ok){ status.innerHTML=v.msg; return; }
+
+  status.innerHTML = "📡 กำลังส่งไป API และรันระบบ...";
+  
+  // Mock API - ตรงนี้ต่อ Server จริงได้เลย
+  // const res = await fetch(CONFIG.API_URL, {method:'POST', headers:{'Authorization':'Bearer '+CONFIG.API_KEY, 'Content-Type':'application/json'}, body:JSON.stringify(data)})
+
+  // สร้างระบบสำเร็จรูป
+  let newCode = 'Cristal-'+data.name.slice(0,3).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+  let record = {id:newCode, name:data.name, from:data.from||'ROOT', group:data.group, time:new Date().toLocaleString('th-TH'), portal:'ready'};
+
+  db.push(record);
+  localStorage.setItem('cristal_db', JSON.stringify(db));
+  
+  // รันสำเร็จรูป
+  result.innerHTML = `✅ <b style="color:#2e7d32;font-size:18px">${newCode}</b><br>
+  จาก: ${record.from} → ${record.name}<br>กลุ่ม: ${record.group}<br>สถานะ: <b>Portal Active</b><br><br>
+  <button onclick="navigator.clipboard.writeText('${newCode}');alert('ก๊อปแล้ว')">ก๊อปโค้ด</button>
+  <button onclick="deployPortal('${newCode}')" style="background:#1565c0;margin-top:4px">เปิดประตู Portal ใช้งาน</button>` + "<hr>" + renderList();
+  
+  status.innerHTML = "✅ รันระบบสำเร็จรูปเรียบร้อย! พร้อมใช้งานหน้าเดียว";
+}
+
+// 3. หน้าเดียวปรับแต่งได้ + Deploy Portal
+function deployPortal(code){
+  alert('🚪 Portal เปิดแล้ว! โค้ด '+code+' พร้อมใช้งานในเว็บฟอร์ม / เกม / เครื่องมือ 1000+ รายการ');
+  // ตรงนี้คือจุดที่ LikeAI จะเอาของไปลงในฟอร์มเว็บได้เลยตามที่เจ้านายบอก
+  window.open('?portal='+code, '_blank');
+}
+
+function renderList(){
+  let g={}; db.forEach(x=>{(g[x.group]=g[x.group]||[]).push(x)});
+  let h=`📋 ทั้งหมด ${db.length} รายการ<br>`;
+  for(let k in g){ h+=`<div style="background:#e8f5e9;margin:4px 0;padding:4px;border-radius:6px"><b>${k}</b>: ${g[k].map(x=>x.id).join(', ')}</div>` }
+  return h;
+}
+
+// AUTO RUN - รันอัตโนมัติเมื่อกรอกครบ
+let timer;
+['name','from','group'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    clearTimeout(timer);
+    if(CONFIG.AUTO_RUN) timer=setTimeout(()=>{
+      let d={name:name.value.trim(), from:from.value.trim(), group:group.value.trim()};
+      if(d.name && d.group) sendToAPI(d);
+    },900);
+  });
+});
+
+// รับโค้ดจากลิงก์ ?code=xxx
+let q=new URLSearchParams(location.search).get('code');
+if(q){ from.value=q; status.innerHTML=`🔗 รับโค้ดมา: ${q} กรอกชื่อ+กลุ่ม ระบบจะรันอัตโนมัติ`; }
+
+result.innerHTML = renderList();
+</script>
+</body>
+</html>
